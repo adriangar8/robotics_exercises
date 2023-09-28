@@ -39,6 +39,8 @@ step = function()
     end
 end
 
+-- MAIN LIKE FUNCTION IMPLEMENTATION -- 
+
 -- Initialize variables and state
 init()
 
