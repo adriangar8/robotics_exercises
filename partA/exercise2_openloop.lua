@@ -1,3 +1,5 @@
+-- Initial function
+
 init = function()
     state = {}; state.next = "WAIT"
     I = {}; I[1] = 0; I[2] = 0; I[3] = 0 -- Initialize Instruction table
@@ -15,6 +17,8 @@ forward = function()
       rdy = true
     end
 end
+
+-- Step function
 
 step = function()
     if I[1] == 1 then -- if instruction command is "go"
@@ -82,3 +86,31 @@ while cycle < 10 do -- Replace 10 with the appropriate number of cycles or a con
 end
 
 print("Program exited")
+
+-- Write outputs
+
+write_outputs = function()
+  if sim then
+    --print(string.format("< L= %i, R= %i, M= ", L.curr, R.curr))
+    --if M.curr then println(M.curr) else println("nil") end
+    if M.curr then L0_UI:appendM(M.curr) end
+    if L and L.curr then
+      sim.setInt32Signal("DC_left", L.curr)
+      sim.setInt32Signal("DC_right", R.curr)
+    end -- if
+  else
+    io.write(string.format("< L= %i, R= %i, M= ", L.curr, R.curr))
+    if M.curr then io.write(M.curr.."\n") else io.write("nil\n")  end
+  end -- if 
+end -- write_outputs()
+
+if not sim then -- LOCAL SIMULATION ENGINE
+  init()
+  forward()
+  while state.curr~="STOP" do
+    write_outputs()
+    read_inputs()
+    step()
+    forward()
+  end -- while
+end -- if
