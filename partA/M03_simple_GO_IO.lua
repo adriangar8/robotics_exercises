@@ -192,8 +192,8 @@ forward = function() -- Current state update
 end
 
 -- P-controller function
-Kp_angle = 1.0  -- Proportional gain for angle
-Kp_distance = 1.0  -- Proportional gain for distance
+Kp_angle = 1.1  -- Proportional gain for angle
+Kp_distance = 1.1  -- Proportional gain for distance
 
 function p_controller(error_angle, error_distance)
   local control_variable_angle = Kp_angle * error_angle
