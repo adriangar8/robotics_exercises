@@ -140,7 +140,7 @@ L0Main = {}
 
 L0Main.init = function(self)
   self.V =  1.23 -- cm/s  -- REPLACE BY VALUES FROM CoppeliaSim
-  self.W = 45.67 -- deg/s -- SIMULATION!!! ***********************************
+  self.W = 45.67 -- deg/s -- SIMULATION!!! *************
   self.I = { 0, 0, 0 } -- Instruction table
   self.T = 0           -- Time
   self.state = {}; self.state.next = "LISTEN"
@@ -155,8 +155,17 @@ L0Main.init = function(self)
 end -- L0Main.init()
 
 L0Main.forward = function(self)
--- TO COMPLETE!!! ************************************************************
-
+  -- Update the current state of various variables to their next values.
+  -- This is typically done at the end of a frame or game loop.
+  self.state.curr = self.state.next
+  self.B.curr = self.B.next
+  self.A.curr = self.A.next
+  self.S.curr = self.S.next
+  self.L.curr = self.L.next
+  self.R.curr = self.R.next
+  self.M.curr = self.M.next
+  self.g.curr = self.g.next
+  self.P.curr = self.P.next
 end -- forward()
 
 L0Main.read_inputs = function(self, D, u)
@@ -237,17 +246,89 @@ L0Main.step = function(self)
     self.state.next = "STOP"; self.state.curr = "STOP"
   end -- if
   if self.state.curr=="LISTEN" then
-  -- TO COMPLETE!!! ************************************************************
-    if self.I[1]==2 then
+    if self.I[1] == 0 then 
+      self.state.next = "LISTEN"
+      self.M.next = nil
+    elseif self.I[1] == 1 and (self.I[2] == nil or self.I[3] == nil) then
+      self.state.next = "LISTEN"
+      self.M.next = "E GO - -"
+    elseif self.I[1] == 1 and self.I[2] == 0 and self.I[3] == 0 then
+      self.state.next = "LISTE"
+      self.M.next = "E GO 0 0"
+    elseif self.I[1] == 3 then
+      self.state.next = "LISTEN"
+      self.M.next = "E RESUME LISTEN?"
+    elseif self.I[1]  == 4 then
+      self.state.next = "LISTEN"
+      self.M.next = "E HALT LISTEN?"
+    elseif self.I[1] > 4 then
+      self.state.next = "LISTEN"
+      self.M.next = "E invalid opcode"
+    elseif self.I[1] == 2 then
+      self.state.next = "LIDAR"
       self.J.next = 1
       self.M.next = nil
-      self.state.next = "LIDAR"
-    else
+    else -- Not sure of
       self.M.next = nil
-    end -- if..elseif
+    end  -- if..elseif
   elseif self.state.curr=="LIDAR" then
-    self.M.next = "W LIDAR not implemented"
-    self.state.next = "LISTEN"
+    if self.I[1] == 4 then 
+      self.state.next = "DONE"
+      self.M.next = "D LIDAR HALTed"
+    elseif self.I[1] != 4 then
+      self.state.next = "ECHO"
+      self.P.next = minianlge(C[J])
+      self.g.next = true
+      self.M.next = nil
+  elseif self.state.curr == "ECHO" then
+    if (self.I[1] != 4) and (not u) then
+      self.state.next = "ECHO"
+      self.g.next = false
+    elseif (self.I[1] != 4) and (u) then
+      self.state.next = "RAY"
+      self.J.next = J * mod(N + 1)
+      self.g.next = false
+    elseif self.I[1] == 4 then
+      self.state.next == "DONE"
+      self.P.next = 0
+      self.g.next = true
+      self.M.next = "D LIDAR HALTed"
+  elseif self.state.curr = "RAY" then
+    if self.I[1] == 4 then
+      self.state.next == "DONE"
+      self.P.next = 0
+      self.g.next = true
+      self.M.next = "D LIDAR HALTed"
+    elseif self.I[1] != 4 then
+      self.state.next = "RESUME"
+      self.P.next = miniangle(C[J])
+      self.M.next = "D RAY"
+  elseif self.state.curr = "RESUME" then
+    if (self.I[1] != 3) and (self.I[1] != 4) then
+      self.state.next = "RESUME"
+      self.M.next = nil
+    elseif (self.I[1] == 3) and (C[J] != 360) then
+      self.state.next = "RAY"
+      self.M.next = nil
+      self.g.next = true
+    elseif self.I[4] == 4 then
+      self.state.next = "DONE"
+      self.P.next = 0
+      self.g.next = true
+      self.M.next = "D RESUME HALTed"
+    elseif (self.I[1] == 3) and (C[J] == 360) then
+      self.state.next = "DONE"
+      self.M.next = "D LIDAR OK"
+      self.P.next = 0
+      self.g.next = true
+  elseif self.state.curr = "DONE" then
+    self.g.next = false
+    if not u then
+      self.state.next = "DONE"
+      self.M.next = nil
+    elseif u then
+      self.state.next = "LISTEN"
+      self.M.next = nil
   else -- Error
       self.state.next = "STOP"
   end -- if..ifelse
@@ -258,7 +339,7 @@ L0Main.active = function(self)
     or self.state.curr=="TURN"
     or self.state.curr=="FWD"
     or self.state.curr=="LIDAR"
-    -- TO COMPLETE!!! ************************************************************
+    or self.state.curr=="STOP"
 end -- L0Main.active()
 
 if not sim then -- LOCAL SIMULATION ENGINE
