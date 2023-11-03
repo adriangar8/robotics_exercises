@@ -151,7 +151,17 @@ L0Main.init = function(self)
   self.R = {}; self.R.next = 0     -- DC value for right motor
   self.M = {}; self.M.next = nil   -- Message to user/upper-level controllers
   self.g = {}; self.g.next = false -- Get distance to obstacle (request)
-  self.P = {}; self.P.next = 0     -- Lidar servo orientation, P in [-90, 90]  
+  self.P = {}; self.P.next = 0     -- Lidar servo orientation, P in [-90, 90] 
+  
+  """
+  """
+
+  self.M.next = nil
+  self.C.next = {-45, 0, 45, 360}
+  self.P.next = 0
+  self.g.next = false
+  self.state.next = "LISTEN"
+  self: forward()
 end -- L0Main.init()
 
 L0Main.forward = function(self)
@@ -166,6 +176,13 @@ L0Main.forward = function(self)
   self.M.curr = self.M.next
   self.g.curr = self.g.next
   self.P.curr = self.P.next
+
+  """
+  """
+
+  if self.state.curr = "LISTEN" then -- This is an inmediate output
+    self.w = 123 
+  end
 end -- forward()
 
 L0Main.read_inputs = function(self, D, u)
@@ -249,86 +266,109 @@ L0Main.step = function(self)
     if self.I[1] == 0 then 
       self.state.next = "LISTEN"
       self.M.next = nil
+    end
     elseif self.I[1] == 1 and (self.I[2] == nil or self.I[3] == nil) then
       self.state.next = "LISTEN"
       self.M.next = "E GO - -"
+    end
     elseif self.I[1] == 1 and self.I[2] == 0 and self.I[3] == 0 then
       self.state.next = "LISTE"
       self.M.next = "E GO 0 0"
+    end
     elseif self.I[1] == 3 then
       self.state.next = "LISTEN"
       self.M.next = "E RESUME LISTEN?"
+    end
     elseif self.I[1]  == 4 then
       self.state.next = "LISTEN"
       self.M.next = "E HALT LISTEN?"
+    end
     elseif self.I[1] > 4 then
       self.state.next = "LISTEN"
       self.M.next = "E invalid opcode"
+    end
     elseif self.I[1] == 2 then
       self.state.next = "LIDAR"
       self.J.next = 1
       self.M.next = nil
+    end
     else -- Not sure of
       self.M.next = nil
     end  -- if..elseif
+  end
   elseif self.state.curr=="LIDAR" then
     if self.I[1] == 4 then 
       self.state.next = "DONE"
       self.M.next = "D LIDAR HALTed"
-    elseif self.I[1] != 4 then
+    end
+    elseif self.I[1] ~= 4 then
       self.state.next = "ECHO"
       self.P.next = minianlge(C[J])
       self.g.next = true
       self.M.next = nil
+    end
   elseif self.state.curr == "ECHO" then
-    if (self.I[1] != 4) and (not u) then
+    if (self.I[1] ~= 4) and (not u) then
       self.state.next = "ECHO"
       self.g.next = false
-    elseif (self.I[1] != 4) and (u) then
+    end
+    elseif (self.I[1] ~= 4) and (u) then
       self.state.next = "RAY"
       self.J.next = J * mod(N + 1)
       self.g.next = false
+    end
     elseif self.I[1] == 4 then
       self.state.next == "DONE"
       self.P.next = 0
       self.g.next = true
       self.M.next = "D LIDAR HALTed"
+    end
+  end
   elseif self.state.curr = "RAY" then
     if self.I[1] == 4 then
       self.state.next == "DONE"
       self.P.next = 0
       self.g.next = true
       self.M.next = "D LIDAR HALTed"
-    elseif self.I[1] != 4 then
+    end
+    elseif self.I[1] ~= 4 then
       self.state.next = "RESUME"
       self.P.next = miniangle(C[J])
       self.M.next = "D RAY"
+    end
+  end
   elseif self.state.curr = "RESUME" then
-    if (self.I[1] != 3) and (self.I[1] != 4) then
+    if (self.I[1] != 3) and (self.I[1] ~= 4) then
       self.state.next = "RESUME"
       self.M.next = nil
-    elseif (self.I[1] == 3) and (C[J] != 360) then
+    end
+    elseif (self.I[1] == 3) and (C[J] ~= 360) then
       self.state.next = "RAY"
       self.M.next = nil
       self.g.next = true
+    end
     elseif self.I[4] == 4 then
       self.state.next = "DONE"
       self.P.next = 0
       self.g.next = true
       self.M.next = "D RESUME HALTed"
+    end
     elseif (self.I[1] == 3) and (C[J] == 360) then
       self.state.next = "DONE"
       self.M.next = "D LIDAR OK"
       self.P.next = 0
       self.g.next = true
+    end
   elseif self.state.curr = "DONE" then
     self.g.next = false
     if not u then
       self.state.next = "DONE"
       self.M.next = nil
+    end
     elseif u then
       self.state.next = "LISTEN"
       self.M.next = nil
+    end
   else -- Error
       self.state.next = "STOP"
   end -- if..ifelse
